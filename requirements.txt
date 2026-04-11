@@ -14,3 +14,4 @@ python-pptx
 python-dotenv
 requests
 sentence-transformers
+dotenv

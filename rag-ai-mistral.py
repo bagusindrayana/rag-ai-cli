@@ -13,6 +13,7 @@ from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, Un
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_mistralai import ChatMistralAI
+from langchain_mistralai import MistralAIEmbeddings
 from langchain_community.vectorstores import FAISS
 
 # Compatibility import: langchain v1.0 moved some modules to `langchain_classic`.
@@ -121,7 +122,10 @@ def main():
 
     # 2. Inisialisasi Embeddings (menggunakan HuggingFace sebagai alternatif)
     # Anda bisa mengganti dengan MistralEmbeddings jika tersedia
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    # embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = MistralAIEmbeddings(
+        model="mistral-embed",
+    )
 
     # 3. Load/Create Vector Store
     if os.path.exists(FAISS_INDEX_PATH):
