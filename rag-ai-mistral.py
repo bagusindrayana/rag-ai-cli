@@ -1,6 +1,7 @@
 import os
 import sys
 import io
+import json
 import getpass
 import warnings
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_mistralai import ChatMistralAI
 from langchain_mistralai import MistralAIEmbeddings
 from langchain_community.vectorstores import FAISS
+from langchain_core.messages import SystemMessage, HumanMessage
 
 # Compatibility import: langchain v1.0 moved some modules to `langchain_classic`.
 try:
@@ -110,6 +112,31 @@ def load_documents():
         documents.extend(loader.load())
     return documents
 
+def format_output_with_references(answer: str, source_docs: list) -> str:
+    """Format output sebagai JSON dengan jawaban dan referensi dari dokumen"""
+    references = []
+    for doc in source_docs:
+        ref = {
+            "source": doc.metadata.get("source", "Unknown"),
+            "page": doc.metadata.get("page", 0),
+            "content": doc.page_content[:500]  # Ambil 500 karakter pertama
+        }
+        references.append(ref)
+    
+    output = {
+        "answer": answer,
+        "references": references,
+        "reference_count": len(references)
+    }
+    
+    return json.dumps(output, indent=2, ensure_ascii=False)
+
+SYSTEM_PROMPT = """Anda adalah asisten AI yang sangat membantu dan berpengetahuan luas.
+Tugas Anda adalah menjawab pertanyaan berdasarkan dokumen yang disediakan.
+Berikan jawaban yang jelas, akurat, dan relevan dengan informasi dari dokumen.
+Jika informasi tidak tersedia dalam dokumen, jelaskan hal tersebut.
+Selalu berikan jawaban dalam bahasa dengan pertanyaan yang diberikan."""
+
 def main():
     if len(sys.argv) < 2:
         print('Penggunaan: python main-mistral.py "pertanyaan anda"')
@@ -137,22 +164,38 @@ def main():
         vector_store = FAISS.from_documents(splits, embeddings)
         vector_store.save_local(FAISS_INDEX_PATH)
 
-    # 4. RAG Chain dengan Mistral
+    # 4. RAG Chain dengan Mistral, System Prompt dan Output JSON
     llm = ChatMistralAI(
         model="mistral-large-latest",
         temperature=0.7,
         api_key=os.environ.get("MISTRAL_API_KEY")
     )
+    retriever = vector_store.as_retriever()
+    
+    # Ambil dokumen relevan
+    source_docs = retriever.invoke(query)
+    
+    # Gabungkan konteks dari dokumen
+    context = "\n\n---\n\n".join([doc.page_content for doc in source_docs])
+    
+    # Buat prompt dengan sistem
+    messages = [
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(content=f"""Berdasarkan dokumen berikut, jawab pertanyaan ini:
+        
+Dokumen:
+{context}
 
-    # Use RetrievalQA helper (compatible with current langchain API)
-    retrieval_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vector_store.as_retriever(),
-    )
-
-    answer = retrieval_chain.run(query)
-    print(f"\n🤖 JAWABAN (Mistral):\n{answer}")
+Pertanyaan: {query}""")
+    ]
+    
+    # Dapatkan jawaban dari LLM
+    response = llm.invoke(messages)
+    answer = response.content
+    
+    # Format output sebagai JSON dengan referensi
+    json_output = format_output_with_references(answer, source_docs)
+    print(json_output)
 
 if __name__ == "__main__":
     main()
