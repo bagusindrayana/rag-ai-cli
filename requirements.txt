@@ -1,0 +1,16 @@
+langchain
+langchain-core
+langchain-community
+langchain-mistralai
+langchain-text-splitters
+langchain-google-genai
+google-auth
+google-api-python-client
+faiss-cpu
+unstructured
+docx2txt
+pypdf
+python-pptx
+python-dotenv
+requests
+sentence-transformers
