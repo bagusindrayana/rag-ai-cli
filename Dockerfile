@@ -17,4 +17,5 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0:8000", "context-api:app"]
+# Run app
+CMD ["python", "context-api.py"]
