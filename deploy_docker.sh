@@ -11,10 +11,17 @@ check_requirements() {
     echo "docker is required. Install Docker and try again." >&2
     exit 1
   fi
-  if ! command -v docker-compose >/dev/null 2>&1; then
-    echo "docker-compose is required. Install docker-compose and try again." >&2
+
+  # Detect docker compose command: either `docker-compose` or `docker compose`
+  if command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE_CMD="docker-compose"
+  elif docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+  else
+    echo "docker compose is required. Install docker-compose (v1) or Docker Compose v2 and try again." >&2
     exit 1
   fi
+  echo "Using compose command: $COMPOSE_CMD"
 }
 
 ensure_env() {
@@ -36,9 +43,9 @@ EOF
 
 build_and_start() {
   print "Building Docker image..."
-  docker-compose build --no-cache
+  $COMPOSE_CMD build --no-cache
   print "Starting containers..."
-  docker-compose up -d
+  $COMPOSE_CMD up -d
 }
 
 show_status() {
