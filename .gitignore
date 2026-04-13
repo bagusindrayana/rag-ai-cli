@@ -1,6 +1,8 @@
 /temp_drive_files
 *.log
 *.env
+*.env.prod
+*.env.local
 *.json
 /faiss_db
 *__pycache__/
